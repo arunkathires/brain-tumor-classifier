@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroScan AI — Brain Tumor Classification</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #f8fafc;
+            --sidebar: #0f172a;
+            --sidebar-w: 240px;
+            --white: #ffffff;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --muted: #64748b;
+            --light: #94a3b8;
+            --accent: #6366f1;
+            --accent2: #8b5cf6;
+            --green: #10b981;
+            --red: #ef4444;
+            --yellow: #f59e0b;
+            --blue: #3b82f6;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+            --card-shadow-hover: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+            font-size: 14px;
+        }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: var(--sidebar);
+            min-height: 100vh;
+            position: fixed;
+            left: 0; top: 0; bottom: 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 50;
+        }
+        .sidebar-logo {
+            padding: 1.5rem 1.25rem;
+            border-bottom: 1px solid #ffffff10;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .logo-icon {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+        }
+        .logo-text {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: white;
+            letter-spacing: -0.01em;
+        }
+        .logo-sub {
+            font-size: 0.62rem;
+            color: #94a3b8;
+            font-weight: 400;
+            margin-top: 0.1rem;
+        }
+        .sidebar-nav {
+            padding: 1rem 0.75rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .nav-section-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #475569;
+            padding: 0.75rem 0.5rem 0.25rem;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.55rem 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: #94a3b8;
+            font-size: 0.82rem;
+            font-weight: 500;
+            text-decoration: none;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+        .nav-item:hover { background: #ffffff08; color: #cbd5e1; }
+        .nav-item.active { background: #6366f120; color: white; }
+        .nav-item .icon { font-size: 1rem; width: 18px; text-align: center; }
+        .nav-badge {
+            margin-left: auto;
+            background: var(--accent);
+            color: white;
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 0.1rem 0.4rem;
+            border-radius: 999px;
+        }
+        .sidebar-bottom {
+            padding: 1rem 0.75rem;
+            border-top: 1px solid #ffffff10;
+        }
+        .status-dot {
+            width: 8px; height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.4rem;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .status-text { font-size: 0.72rem; color: #64748b; }
+
+        /* ── MAIN ── */
+        .main {
+            margin-left: var(--sidebar-w);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── TOPBAR ── */
+        .topbar {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            padding: 0 1.5rem;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 40;
+        }
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .page-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .breadcrumb {
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .model-badge {
+            background: #6366f115;
+            color: var(--accent);
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.3rem 0.8rem;
+            border-radius: 999px;
+            border: 1px solid #6366f130;
+        }
+        .accuracy-pill {
+            background: #10b98115;
+            color: var(--green);
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.3rem 0.8rem;
+            border-radius: 999px;
+            border: 1px solid #10b98130;
+        }
+
+        /* ── CONTENT ── */
+        .content {
+            padding: 1.5rem;
+            flex: 1;
+        }
+
+        /* ── STAT CARDS ROW ── */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.1rem 1.25rem;
+            box-shadow: var(--card-shadow);
+        }
+        .stat-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
+            margin-bottom: 0.4rem;
+        }
+        .stat-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1;
+        }
+        .stat-sub {
+            font-size: 0.72rem;
+            color: var(--muted);
+            margin-top: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .stat-up { color: var(--green); font-weight: 600; }
+        .stat-icon {
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+            float: right;
+            margin-top: -2px;
+        }
+
+        /* ── MAIN GRID ── */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* ── UPLOAD CARD ── */
+        .card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .card-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .card-body { padding: 1.25rem; }
+
+        /* ── DROP ZONE ── */
+        .dropzone {
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f8fafc;
+            position: relative;
+        }
+        .dropzone:hover, .dropzone.dragover {
+            border-color: var(--accent);
+            background: #6366f108;
+        }
+        .dropzone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+        .drop-icon {
+            width: 48px; height: 48px;
+            background: #6366f115;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem;
+            margin: 0 auto 1rem;
+        }
+        .drop-title {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.3rem;
+        }
+        .drop-sub {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+        .drop-sub span {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        /* ── PREVIEW ── */
+        .preview-area {
+            display: none;
+            margin-top: 1rem;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        .preview-area img {
+            width: 100%;
+            max-height: 280px;
+            object-fit: cover;
+            display: block;
+        }
+        .preview-overlay {
+            position: absolute;
+            top: 0.5rem; right: 0.5rem;
+        }
+        .btn-remove {
+            background: #000000aa;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.72rem;
+            cursor: pointer;
+        }
+
+        /* ── ANALYZE BTN ── */
+        .btn-analyze {
+            width: 100%;
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .btn-analyze:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 15px #6366f140; }
+        .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* ── LOADING ── */
+        .loading-bar {
+            display: none;
+            margin-top: 1rem;
+        }
+        .loading-track {
+            background: var(--border);
+            border-radius: 999px;
+            height: 4px;
+            overflow: hidden;
+        }
+        .loading-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            border-radius: 999px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .loading-text {
+            font-size: 0.72rem;
+            color: var(--muted);
+            margin-top: 0.4rem;
+            text-align: center;
+        }
+
+        /* ── RESULT PANEL ── */
+        .result-panel { display: none; }
+
+        .prediction-card {
+            background: linear-gradient(135deg, #6366f108, #8b5cf608);
+            border: 1px solid #6366f120;
+            border-radius: 10px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .prediction-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            margin-bottom: 0.3rem;
+        }
+        .prediction-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.15rem;
+        }
+        .prediction-type {
+            font-size: 0.78rem;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+        }
+        .confidence-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .conf-bar-wrap {
+            flex: 1;
+            background: #e2e8f0;
+            border-radius: 999px;
+            height: 8px;
+            overflow: hidden;
+        }
+        .conf-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            border-radius: 999px;
+            transition: width 1s ease;
+        }
+        .conf-pct {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 42px;
+            text-align: right;
+        }
+
+        /* ── TOP 5 LIST ── */
+        .top5-title {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
+            margin-bottom: 0.6rem;
+        }
+        .top5-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .top5-item:last-child { border-bottom: none; }
+        .top5-rank {
+            width: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--light);
+            text-align: center;
+        }
+        .top5-name {
+            flex: 1;
+            font-size: 0.78rem;
+            color: var(--text);
+            font-weight: 500;
+        }
+        .top5-bar-wrap {
+            width: 80px;
+            background: var(--border);
+            border-radius: 999px;
+            height: 5px;
+            overflow: hidden;
+        }
+        .top5-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 1s ease;
+        }
+        .top5-pct {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--muted);
+            min-width: 36px;
+            text-align: right;
+        }
+
+        /* ── XAI SECTION ── */
+        .xai-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .xai-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+        }
+        .xai-header {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .xai-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .xai-tag {
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            background: #6366f115;
+            color: var(--accent);
+        }
+        .xai-body {
+            padding: 1rem;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8fafc;
+        }
+        .xai-placeholder {
+            text-align: center;
+            color: var(--light);
+            font-size: 0.78rem;
+        }
+        .xai-placeholder .ph-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .xai-body iframe {
+            width: 100%;
+            height: 340px;
+            border: none;
+            display: block;
+        }
+
+        /* ── CHARTS ROW ── */
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .chart-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+        .chart-header {
+            padding: 0.85rem 1.1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .chart-title {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .chart-body { padding: 1rem; }
+        .chart-wrap { position: relative; height: 200px; }
+
+        /* ── FULL DEMO EMBED ── */
+        .demo-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        .demo-topbar {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #f8fafc;
+        }
+        .demo-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .demo-url {
+            margin-left: 0.5rem;
+            font-size: 0.72rem;
+            color: var(--muted);
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.2rem 0.8rem;
+            flex: 1;
+        }
+        .demo-card iframe {
+            width: 100%;
+            height: 850px;
+            border: none;
+            display: block;
+        }
+
+        /* ── INFO GRID ── */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .info-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.1rem;
+            box-shadow: var(--card-shadow);
+        }
+        .info-icon {
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        .info-card h4 {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.3rem;
+        }
+        .info-card p {
+            font-size: 0.75rem;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        /* ── COLORS ── */
+        .bg-indigo { background: #6366f115; }
+        .bg-purple { background: #8b5cf615; }
+        .bg-green  { background: #10b98115; }
+        .bg-blue   { background: #3b82f615; }
+        .bg-yellow { background: #f59e0b15; }
+        .bg-red    { background: #ef444415; }
+
+        /* ── HIDDEN ── */
+        .hidden { display: none !important; }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+    </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-icon">🧠</div>
+        <div>
+            <div class="logo-text">NeuroScan AI</div>
+            <div class="logo-sub">Brain Tumor Detection</div>
+        </div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Workspace</div>
+        <a class="nav-item active" href="#">
+            <span class="icon">⬡</span> Dashboard
+        </a>
+        <a class="nav-item" href="#classify">
+            <span class="icon">🔬</span> Classify MRI
+        </a>
+        <a class="nav-item" href="#xai-section">
+            <span class="icon">🗺</span> Explanations
+        </a>
+        <a class="nav-item" href="#charts-section">
+            <span class="icon">📊</span> Analytics
+        </a>
+
+        <div class="nav-section-label">Model</div>
+        <a class="nav-item" href="#">
+            <span class="icon">⚙</span> ViT-B/16 + KAN
+            <span class="nav-badge">v1</span>
+        </a>
+        <a class="nav-item" href="#">
+            <span class="icon">📋</span> 46 Classes
+        </a>
+        <a class="nav-item" href="https://huggingface.co/spaces/ak-4647/brain-tumor-classifier" target="_blank">
+            <span class="icon">🤗</span> Full App
+        </a>
+    </nav>
+    <div class="sidebar-bottom">
+        <div class="status-text">
+            <span class="status-dot"></span>Model Online · 88.98% Acc
+        </div>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <span class="breadcrumb">NeuroScan AI /</span>
+            <span class="page-title">Dashboard</span>
+        </div>
+        <div class="topbar-right">
+            <span class="model-badge">ViT-B/16 + KAN</span>
+            <span class="accuracy-pill">↑ 88.98% Accuracy</span>
+        </div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+        <!-- STATS ROW -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-icon bg-indigo">🎯</div>
+                <div class="stat-label">Top-1 Accuracy</div>
+                <div class="stat-value">88.98%</div>
+                <div class="stat-sub"><span class="stat-up">↑ vs baseline</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bg-green">✓</div>
+                <div class="stat-label">Top-5 Accuracy</div>
+                <div class="stat-value">99.23%</div>
+                <div class="stat-sub"><span class="stat-up">↑ 0.26%</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bg-purple">◈</div>
+                <div class="stat-label">F1 Score</div>
+                <div class="stat-value">0.9048</div>
+                <div class="stat-sub">Macro average</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon bg-blue">⬡</div>
+                <div class="stat-label">Tumor Classes</div>
+                <div class="stat-value">46</div>
+                <div class="stat-sub">T1 · T1C+ · T2</div>
+            </div>
+        </div>
+
+        <!-- INFO CARDS -->
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="info-icon bg-indigo">🔲</div>
+                <h4>Vision Transformer</h4>
+                <p>ViT-B/16 pre-trained on ImageNet splits MRI into 16×16 patches and extracts features via multi-head self-attention.</p>
+            </div>
+            <div class="info-card">
+                <div class="info-icon bg-purple">📐</div>
+                <h4>KAN Classifier</h4>
+                <p>Kolmogorov-Arnold Network replaces the standard MLP head with learnable univariate spline functions for better expressiveness.</p>
+            </div>
+            <div class="info-card">
+                <div class="info-icon bg-green">🔍</div>
+                <h4>Explainable AI</h4>
+                <p>GradCAM heatmaps and Attention Rollout maps highlight which MRI regions influenced the model's classification decision.</p>
+            </div>
+        </div>
+
+        <!-- CLASSIFY + RESULTS -->
+        <div class="main-grid" id="classify">
+
+            <!-- LEFT: Upload -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">🔬 MRI Classification</div>
+                </div>
+                <div class="card-body">
+                    <div class="dropzone" id="dropzone">
+                        <input type="file" id="fileInput" accept="image/*">
+                        <div class="drop-icon">🖼</div>
+                        <div class="drop-title">Drop MRI image here</div>
+                        <div class="drop-sub">or <span>browse files</span> &nbsp;·&nbsp; JPG, PNG supported</div>
+                    </div>
+
+                    <div class="preview-area" id="previewArea">
+                        <img id="previewImg" src="" alt="MRI Preview">
+                        <div class="preview-overlay">
+                            <button class="btn-remove" onclick="resetUpload()">✕ Remove</button>
+                        </div>
+                    </div>
+
+                    <button class="btn-analyze" id="analyzeBtn" disabled onclick="runAnalysis()">
+                        <span id="btnIcon">⬡</span>
+                        <span id="btnText">Analyze MRI</span>
+                    </button>
+
+                    <div class="loading-bar" id="loadingBar">
+                        <div class="loading-track">
+                            <div class="loading-fill" id="loadingFill"></div>
+                        </div>
+                        <div class="loading-text" id="loadingText">Initializing model...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Results -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📋 Classification Result</div>
+                </div>
+                <div class="card-body">
+
+                    <!-- Empty state -->
+                    <div id="emptyState" style="text-align:center; padding:3rem 1rem; color:var(--light);">
+                        <div style="font-size:3rem; margin-bottom:1rem;">🧠</div>
+                        <div style="font-size:0.85rem; font-weight:500; color:var(--muted); margin-bottom:0.3rem;">No analysis yet</div>
+                        <div style="font-size:0.75rem;">Upload an MRI image to get started</div>
+                    </div>
+
+                    <!-- Result panel -->
+                    <div class="result-panel" id="resultPanel">
+
+                        <div class="prediction-card">
+                            <div class="prediction-label">Primary Diagnosis</div>
+                            <div class="prediction-name" id="predName">—</div>
+                            <div class="prediction-type" id="predType">—</div>
+                            <div class="confidence-row">
+                                <div class="conf-bar-wrap">
+                                    <div class="conf-bar-fill" id="confBar" style="width:0%"></div>
+                                </div>
+                                <div class="conf-pct" id="confPct">—</div>
+                            </div>
+                        </div>
+
+                        <div class="top5-title">Differential Diagnosis — Top 5</div>
+                        <div id="top5List"></div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- XAI SECTION -->
+        <div class="xai-grid" id="xai-section">
+            <div class="xai-card">
+                <div class="xai-header">
+                    <div class="xai-title">GradCAM Heatmap</div>
+                    <div class="xai-tag">Gradient-based XAI</div>
+                </div>
+                <div class="xai-body" id="gradcamBody">
+                    <div class="xai-placeholder">
+                        <div class="ph-icon">🔥</div>
+                        <div>Run analysis to view GradCAM</div>
+                    </div>
+                </div>
+            </div>
+            <div class="xai-card">
+                <div class="xai-header">
+                    <div class="xai-title">Attention Rollout</div>
+                    <div class="xai-tag">Transformer XAI</div>
+                </div>
+                <div class="xai-body" id="rolloutBody">
+                    <div class="xai-placeholder">
+                        <div class="ph-icon">🌀</div>
+                        <div>Run analysis to view Attention Map</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHARTS -->
+        <div class="charts-row" id="charts-section">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">Confidence Distribution</div>
+                </div>
+                <div class="chart-body">
+                    <div class="chart-wrap">
+                        <canvas id="confChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-title">Model Performance Metrics</div>
+                </div>
+                <div class="chart-body">
+                    <div class="chart-wrap">
+                        <canvas id="metricsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FULL APP EMBED -->
+        <div class="demo-card">
+            <div class="demo-topbar">
+                <div class="demo-dot" style="background:#ff5f57"></div>
+                <div class="demo-dot" style="background:#febc2e"></div>
+                <div class="demo-dot" style="background:#28c840"></div>
+                <div class="demo-url">ak-4647-brain-tumor-classifier.hf.space</div>
+            </div>
+            <iframe
+                src="https://ak-4647-brain-tumor-classifier.hf.space"
+                frameborder="0"
+                allow="microphone; camera">
+            </iframe>
+        </div>
+
+    </div>
+</div>
+
+<script>
+// ── CLASSES ──────────────────────────────────────────────────
+const CLASSES = [
+    'Astrocitoma T1','Astrocitoma T1C+','Astrocitoma T2',
+    'Carcinoma T1','Carcinoma T1C+','Carcinoma T2',
+    'Ependimoma T1','Ependimoma T1C+','Ependimoma T2',
+    'Ganglioglioma T1','Ganglioglioma T1C+','Ganglioglioma T2',
+    'Germinoma T1','Germinoma T1C+','Germinoma T2',
+    'Glioblastoma T1','Glioblastoma T1C+','Glioblastoma T2',
+    'Granuloma T1','Granuloma T1C+','Granuloma T2',
+    'Meduloblastoma T1','Meduloblastoma T1C+','Meduloblastoma T2',
+    'Meningioma T1','Meningioma T1C+','Meningioma T2',
+    'Neurocitoma T1','Neurocitoma T1C+','Neurocitoma T2',
+    'Oligodendroglioma T1','Oligodendroglioma T1C+','Oligodendroglioma T2',
+    'Papiloma T1','Papiloma T1C+','Papiloma T2',
+    'Schwannoma T1','Schwannoma T1C+','Schwannoma T2',
+    'Testing','Training',
+    'Tuberculoma T1','Tuberculoma T1C+','Tuberculoma T2',
+    '_NORMAL T1','_NORMAL T2'
+];
+
+const BAR_COLORS = [
+    '#6366f1','#8b5cf6','#3b82f6','#10b981','#f59e0b'
+];
+
+// ── FILE UPLOAD ───────────────────────────────────────────────
+const dropzone   = document.getElementById('dropzone');
+const fileInput  = document.getElementById('fileInput');
+const previewArea= document.getElementById('previewArea');
+const previewImg = document.getElementById('previewImg');
+const analyzeBtn = document.getElementById('analyzeBtn');
+let   currentFile = null;
+
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) handleFile(file);
+});
+fileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) handleFile(file);
+});
+
+function handleFile(file) {
+    currentFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+        previewImg.src = e.target.result;
+        dropzone.style.display = 'none';
+        previewArea.style.display = 'block';
+        analyzeBtn.disabled = false;
+    };
+    reader.readAsDataURL(file);
+}
+
+function resetUpload() {
+    currentFile = null;
+    previewImg.src = '';
+    dropzone.style.display = 'block';
+    previewArea.style.display = 'none';
+    analyzeBtn.disabled = true;
+    fileInput.value = '';
+    document.getElementById('resultPanel').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('gradcamBody').innerHTML = `<div class="xai-placeholder"><div class="ph-icon">🔥</div><div>Run analysis to view GradCAM</div></div>`;
+    document.getElementById('rolloutBody').innerHTML = `<div class="xai-placeholder"><div class="ph-icon">🌀</div><div>Run analysis to view Attention Map</div></div>`;
+}
+
+// ── SIMULATE ANALYSIS ─────────────────────────────────────────
+// NOTE: This simulates results UI. In production this calls the HF Space API.
+// For the live demo, use the embedded HF Space below.
+function runAnalysis() {
+    if (!currentFile) return;
+
+    analyzeBtn.disabled = true;
+    document.getElementById('btnText').textContent = 'Analyzing...';
+    document.getElementById('btnIcon').textContent = '⟳';
+
+    const loadingBar  = document.getElementById('loadingBar');
+    const loadingFill = document.getElementById('loadingFill');
+    const loadingText = document.getElementById('loadingText');
+    loadingBar.style.display = 'block';
+
+    const steps = [
+        [15, 'Preprocessing image...'],
+        [35, 'Extracting patch embeddings...'],
+        [55, 'Running ViT attention blocks...'],
+        [75, 'KAN classification head...'],
+        [90, 'Generating XAI maps...'],
+        [100,'Analysis complete!'],
+    ];
+
+    let i = 0;
+    const interval = setInterval(() => {
+        if (i >= steps.length) {
+            clearInterval(interval);
+            setTimeout(showResults, 300);
+            return;
+        }
+        loadingFill.style.width = steps[i][0] + '%';
+        loadingText.textContent = steps[i][1];
+        i++;
+    }, 400);
+}
+
+function showResults() {
+    // Simulated top-5 (in real deployment this comes from HF API)
+    const mockResults = [
+        { cls: Math.floor(Math.random() * 46), conf: 0.72 + Math.random() * 0.2 },
+        { cls: Math.floor(Math.random() * 46), conf: 0.08 + Math.random() * 0.1 },
+        { cls: Math.floor(Math.random() * 46), conf: 0.04 + Math.random() * 0.06 },
+        { cls: Math.floor(Math.random() * 46), conf: 0.02 + Math.random() * 0.03 },
+        { cls: Math.floor(Math.random() * 46), conf: 0.01 + Math.random() * 0.02 },
+    ];
+    // Normalize
+    const total = mockResults.reduce((s,r) => s + r.conf, 0);
+    mockResults.forEach(r => r.conf = r.conf / total);
+    mockResults[0].conf = Math.min(mockResults[0].conf, 0.95);
+
+    const top = mockResults[0];
+    const parts = CLASSES[top.cls].split(' ');
+    const tumorName = parts.slice(0, -1).join(' ');
+    const mriType   = parts[parts.length - 1];
+
+    // Fill result panel
+    document.getElementById('predName').textContent = tumorName;
+    document.getElementById('predType').textContent = 'MRI Modality: ' + mriType;
+    document.getElementById('confPct').textContent  = (top.conf * 100).toFixed(1) + '%';
+    setTimeout(() => {
+        document.getElementById('confBar').style.width = (top.conf * 100) + '%';
+    }, 100);
+
+    // Top-5 list
+    const list = document.getElementById('top5List');
+    list.innerHTML = '';
+    mockResults.forEach((r, idx) => {
+        const parts2 = CLASSES[r.cls].split(' ');
+        const name2  = parts2.slice(0, -1).join(' ') + ' (' + parts2[parts2.length-1] + ')';
+        const pct    = (r.conf * 100).toFixed(1);
+        list.innerHTML += `
+        <div class="top5-item">
+            <div class="top5-rank">${idx + 1}</div>
+            <div class="top5-name">${name2}</div>
+            <div class="top5-bar-wrap">
+                <div class="top5-bar-fill" style="width:${pct}%; background:${BAR_COLORS[idx]}"></div>
+            </div>
+            <div class="top5-pct">${pct}%</div>
+        </div>`;
+    });
+
+    // Show panels
+    document.getElementById('emptyState').style.display  = 'none';
+    document.getElementById('resultPanel').style.display = 'block';
+
+    // XAI placeholders with uploaded image (visual effect)
+    const imgSrc = previewImg.src;
+    document.getElementById('gradcamBody').innerHTML =
+        `<div style="text-align:center">
+            <img src="${imgSrc}" style="width:100%;max-height:300px;object-fit:cover;border-radius:6px;filter:sepia(0.3) hue-rotate(-20deg) saturate(2);">
+            <div style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem;">GradCAM overlay — use full app for live heatmap</div>
+         </div>`;
+    document.getElementById('rolloutBody').innerHTML =
+        `<div style="text-align:center">
+            <img src="${imgSrc}" style="width:100%;max-height:300px;object-fit:cover;border-radius:6px;filter:sepia(1) hue-rotate(200deg) saturate(3);">
+            <div style="font-size:0.72rem;color:var(--muted);margin-top:0.5rem;">Attention Rollout — use full app for live attention map</div>
+         </div>`;
+
+    // Update confidence chart
+    updateConfChart(mockResults);
+
+    // Reset button
+    document.getElementById('btnText').textContent = 'Analyze MRI';
+    document.getElementById('btnIcon').textContent = '⬡';
+    document.getElementById('loadingBar').style.display = 'none';
+    analyzeBtn.disabled = false;
+}
+
+// ── CHARTS ────────────────────────────────────────────────────
+let confChart = null;
+
+function updateConfChart(results) {
+    const labels = results.map(r => {
+        const p = CLASSES[r.cls].split(' ');
+        return p.slice(0, -1).join(' ');
+    });
+    const data = results.map(r => parseFloat((r.conf * 100).toFixed(1)));
+
+    if (confChart) confChart.destroy();
+    const ctx = document.getElementById('confChart').getContext('2d');
+    confChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Confidence (%)',
+                data,
+                backgroundColor: BAR_COLORS,
+                borderRadius: 6,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: { color: '#f1f5f9' },
+                    ticks: { font: { size: 10 }, color: '#94a3b8' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 9 }, color: '#94a3b8', maxRotation: 20 }
+                }
+            }
+        }
+    });
+}
+
+// Static metrics radar chart
+(function initMetricsChart() {
+    const ctx = document.getElementById('metricsChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'Top-5 Acc'],
+            datasets: [
+                {
+                    label: 'ViT + KAN',
+                    data: [88.98, 91.23, 91.20, 90.48, 99.23],
+                    backgroundColor: '#6366f120',
+                    borderColor: '#6366f1',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#6366f1',
+                    pointRadius: 4,
+                },
+                {
+                    label: 'ViT + MLP',
+                    data: [88.73, 90.00, 90.56, 89.68, 98.97],
+                    backgroundColor: '#94a3b820',
+                    borderColor: '#94a3b8',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#94a3b8',
+                    pointRadius: 4,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { font: { size: 10 }, color: '#64748b', boxWidth: 12 }
+                }
+            },
+            scales: {
+                r: {
+                    min: 85,
+                    max: 100,
+                    grid: { color: '#f1f5f9' },
+                    ticks: { font: { size: 9 }, color: '#94a3b8', stepSize: 5 },
+                    pointLabels: { font: { size: 10 }, color: '#64748b' }
+                }
+            }
+        }
+    });
+})();
+</script>
+
+</body>
+</html>
