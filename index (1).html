@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain Tumor Classification using ViT-KAN</title>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #fafaf8;
+            --text: #1a1a1a;
+            --muted: #555;
+            --light: #888;
+            --border: #ddd;
+            --accent: #1a56db;
+            --tag-bg: #eef2ff;
+            --tag-text: #3730a3;
+            --code-bg: #f4f4f0;
+            --best: #064e3b;
+            --best-bg: #ecfdf5;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        /* ── TOP BAR ── */
+        .topbar {
+            border-bottom: 1px solid var(--border);
+            padding: 0.6rem 2rem;
+            font-size: 0.78rem;
+            color: var(--light);
+            display: flex;
+            gap: 1.5rem;
+            background: white;
+        }
+        .topbar span { display: flex; align-items: center; gap: 0.3rem; }
+
+        /* ── MAIN WRAPPER ── */
+        .wrapper {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 3rem 2rem 5rem;
+        }
+
+        /* ── HEADER ── */
+        .paper-venue {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.8rem;
+        }
+
+        h1 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 2rem;
+            font-weight: 600;
+            line-height: 1.3;
+            color: var(--text);
+            margin-bottom: 1.2rem;
+        }
+
+        .authors {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 0.4rem;
+        }
+        .authors strong { color: var(--text); font-weight: 600; }
+
+        .affiliation {
+            font-size: 0.82rem;
+            color: var(--light);
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+        .tag {
+            background: var(--tag-bg);
+            color: var(--tag-tag);
+            color: var(--tag-text);
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 0.25rem 0.7rem;
+            border-radius: 4px;
+            border: 1px solid #c7d2fe;
+        }
+
+        .links {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 2.5rem;
+        }
+        .link-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.45rem 1rem;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            text-decoration: none;
+            border: 1px solid var(--border);
+            color: var(--text);
+            background: white;
+            transition: all 0.15s;
+        }
+        .link-btn:hover { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
+        .link-btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
+        .link-btn.primary:hover { background: #1e40af; }
+
+        /* ── DIVIDER ── */
+        hr { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }
+
+        /* ── ABSTRACT ── */
+        .abstract-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--light);
+            margin-bottom: 0.6rem;
+        }
+        .abstract {
+            font-family: 'Source Serif 4', serif;
+            font-size: 0.95rem;
+            color: var(--muted);
+            line-height: 1.8;
+            border-left: 3px solid var(--border);
+            padding-left: 1.2rem;
+        }
+
+        /* ── SECTION HEADINGS ── */
+        h2 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+        h3 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            margin-top: 1.2rem;
+        }
+        p { color: var(--muted); margin-bottom: 0.8rem; font-size: 0.92rem; }
+
+        /* ── METRICS ROW ── */
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .metric {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            background: white;
+        }
+        .metric-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--accent);
+        }
+        .metric-name {
+            font-size: 0.72rem;
+            color: var(--light);
+            margin-top: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* ── ARCHITECTURE DIAGRAM ── */
+        .arch-flow {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            overflow-x: auto;
+            padding: 1.5rem 0;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+        }
+        .arch-box {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.6rem 0.9rem;
+            text-align: center;
+            background: white;
+            min-width: 100px;
+        }
+        .arch-box .name {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .arch-box .detail {
+            font-size: 0.68rem;
+            color: var(--light);
+            margin-top: 0.15rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .arch-box.highlight {
+            border-color: var(--accent);
+            background: #eff6ff;
+        }
+        .arch-arrow {
+            color: var(--light);
+            font-size: 1rem;
+            padding: 0 0.2rem;
+            flex-shrink: 0;
+        }
+
+        /* ── TABLE ── */
+        .table-container {
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        thead th {
+            text-align: left;
+            padding: 0.6rem 1rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--light);
+            border-bottom: 2px solid var(--border);
+            background: var(--bg);
+        }
+        tbody td {
+            padding: 0.65rem 1rem;
+            border-bottom: 1px solid #f0f0f0;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+        }
+        tbody tr:first-child td {
+            color: var(--best);
+            background: var(--best-bg);
+            font-weight: 500;
+        }
+        tbody td:first-child {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+        }
+        .ours-badge {
+            display: inline-block;
+            background: #d1fae5;
+            color: var(--best);
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+            margin-left: 0.4rem;
+            font-family: 'Inter', sans-serif;
+            vertical-align: middle;
+        }
+
+        /* ── CODE BLOCK ── */
+        .code-block {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem 1.2rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: #333;
+            overflow-x: auto;
+            margin: 1rem 0;
+            line-height: 1.6;
+        }
+        .code-comment { color: #888; }
+        .code-keyword { color: #1a56db; }
+        .code-string { color: #047857; }
+
+        /* ── DEMO ── */
+        .demo-container {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+            margin: 1rem 0;
+        }
+        .demo-bar {
+            background: #f9f9f7;
+            border-bottom: 1px solid var(--border);
+            padding: 0.6rem 1rem;
+            font-size: 0.78rem;
+            color: var(--light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .demo-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .demo-bar iframe {
+            width: 100%;
+            height: 850px;
+            border: none;
+            display: block;
+        }
+
+        /* ── XAI ── */
+        .xai-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        .xai-item {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.2rem;
+            background: white;
+        }
+        .xai-item h4 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            color: var(--text);
+        }
+        .xai-item p {
+            font-size: 0.8rem;
+            color: var(--light);
+            margin: 0;
+        }
+
+        /* ── DATASET ── */
+        .dataset-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.8rem;
+            margin: 1rem 0;
+        }
+        .dataset-item {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.8rem 1rem;
+        }
+        .dataset-item .label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--light);
+            margin-bottom: 0.2rem;
+        }
+        .dataset-item .value {
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        /* ── FOOTER ── */
+        .footer {
+            border-top: 1px solid var(--border);
+            padding: 1.5rem 2rem;
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--light);
+            background: white;
+        }
+        .footer a { color: var(--accent); text-decoration: none; }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 1.5rem; }
+            .xai-grid { grid-template-columns: 1fr; }
+            .dataset-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <span>📄 Conference Paper</span>
+    <span>🏫 VIT Vellore</span>
+    <span>📅 2026</span>
+    <span>🧠 Medical Imaging · Deep Learning · XAI</span>
+</div>
+
+<div class="wrapper">
+
+    <!-- HEADER -->
+    <div class="paper-venue">Set Conference · MSc AIML · VIT Vellore</div>
+
+    <h1>Brain Tumor Classification using Vision Transformer and Kolmogorov-Arnold Networks with Explainable AI</h1>
+
+    <div class="authors">
+        <strong>Arun K</strong>
+    </div>
+    <div class="affiliation">
+        School of Computer Science and Engineering, VIT Vellore, Tamil Nadu, India
+    </div>
+
+    <div class="tags">
+        <span class="tag">Vision Transformer</span>
+        <span class="tag">KAN</span>
+        <span class="tag">GradCAM</span>
+        <span class="tag">Attention Rollout</span>
+        <span class="tag">Brain Tumor</span>
+        <span class="tag">MRI Classification</span>
+        <span class="tag">46 Classes</span>
+        <span class="tag">Explainable AI</span>
+    </div>
+
+    <div class="links">
+        <a href="#demo" class="link-btn primary">▶ Live Demo</a>
+        <a href="https://huggingface.co/spaces/ak-4647/brain-tumor-classifier" target="_blank" class="link-btn">🤗 Hugging Face</a>
+        <a href="https://huggingface.co/ak-4647/brain-tumor-vit-kan" target="_blank" class="link-btn">⚙ Model Weights</a>
+        <a href="https://www.kaggle.com/datasets/fernando2rad/brain-tumor-mri-images-44c" target="_blank" class="link-btn">📊 Dataset</a>
+        <a href="https://github.com/arunkathires" target="_blank" class="link-btn">💻 GitHub</a>
+    </div>
+
+    <hr>
+
+    <!-- ABSTRACT -->
+    <div class="abstract-label">Abstract</div>
+    <div class="abstract">
+        Brain tumor diagnosis from MRI scans is a critical and time-sensitive clinical task.
+        Manual interpretation by radiologists is prone to fatigue and inter-observer variability,
+        motivating the need for reliable automated systems. In this work, we propose a novel
+        deep learning framework that integrates a pre-trained Vision Transformer (ViT-B/16)
+        as a feature extractor with a Kolmogorov-Arnold Network (KAN) classification head
+        for fine-grained tumor classification across 46 classes spanning multiple tumor types
+        and MRI modalities (T1, T1C+, T2). To address clinical interpretability requirements,
+        we incorporate two complementary Explainable AI techniques — GradCAM and Attention
+        Rollout — that highlight diagnostically relevant regions. Our model achieves 88.98%
+        top-1 accuracy and 99.23% top-5 accuracy, outperforming the standard ViT + MLP
+        baseline across all evaluation metrics.
+    </div>
+
+    <hr>
+
+    <!-- METRICS -->
+    <h2>Key Results</h2>
+    <div class="metrics">
+        <div class="metric">
+            <div class="metric-val">88.98%</div>
+            <div class="metric-name">Top-1 Accuracy</div>
+        </div>
+        <div class="metric">
+            <div class="metric-val">99.23%</div>
+            <div class="metric-name">Top-5 Accuracy</div>
+        </div>
+        <div class="metric">
+            <div class="metric-val">0.9048</div>
+            <div class="metric-name">Macro F1</div>
+        </div>
+        <div class="metric">
+            <div class="metric-val">0.9123</div>
+            <div class="metric-name">Precision</div>
+        </div>
+        <div class="metric">
+            <div class="metric-val">0.9120</div>
+            <div class="metric-name">Recall</div>
+        </div>
+    </div>
+
+    <hr>
+
+    <!-- DATASET -->
+    <h2>Dataset</h2>
+    <p>
+        We use the <em>Brain Tumor MRI Images</em> dataset (fernando2rad, Kaggle),
+        containing T1, contrast-enhanced T1 (T1C+), and T2 weighted MRI images
+        across multiple tumor categories. The dataset is split 70/15/15 for
+        training, validation, and testing with a fixed random seed for reproducibility.
+    </p>
+    <div class="dataset-grid">
+        <div class="dataset-item">
+            <div class="label">Classes</div>
+            <div class="value">46 tumor types</div>
+        </div>
+        <div class="dataset-item">
+            <div class="label">MRI Modalities</div>
+            <div class="value">T1, T1C+, T2</div>
+        </div>
+        <div class="dataset-item">
+            <div class="label">Split</div>
+            <div class="value">70 / 15 / 15</div>
+        </div>
+        <div class="dataset-item">
+            <div class="label">Image Size</div>
+            <div class="value">224 × 224 px</div>
+        </div>
+        <div class="dataset-item">
+            <div class="label">Source</div>
+            <div class="value">Kaggle</div>
+        </div>
+        <div class="dataset-item">
+            <div class="label">Format</div>
+            <div class="value">JPG / PNG</div>
+        </div>
+    </div>
+
+    <hr>
+
+    <!-- ARCHITECTURE -->
+    <h2>Architecture</h2>
+    <p>
+        The proposed model uses ViT-B/16 pre-trained on ImageNet as a frozen
+        feature extractor (first 4 blocks frozen), with a two-layer KAN head
+        replacing the standard MLP classifier. The KAN uses learned univariate
+        functions (SiLU base + spline residual) instead of fixed linear weights.
+    </p>
+
+    <div class="arch-flow">
+        <div class="arch-box">
+            <div class="name">MRI Input</div>
+            <div class="detail">224×224×3</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box">
+            <div class="name">Patch Embed</div>
+            <div class="detail">16×16 patches</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box">
+            <div class="name">ViT-B/16</div>
+            <div class="detail">12 attn blocks</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box">
+            <div class="name">CLS Token</div>
+            <div class="detail">dim=768</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box highlight">
+            <div class="name">KAN Head</div>
+            <div class="detail">768→256→46</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box">
+            <div class="name">Softmax</div>
+            <div class="detail">46 classes</div>
+        </div>
+    </div>
+
+    <h3>Training Configuration</h3>
+    <div class="code-block">
+<span class="code-comment"># Hyperparameters</span>
+optimizer    = <span class="code-string">AdamW</span>  (lr=2e-4, weight_decay=1e-3)
+scheduler    = <span class="code-string">OneCycleLR</span>  (max_lr=2e-4, pct_start=0.1)
+loss         = <span class="code-string">CrossEntropyLoss</span>  (label_smoothing=0.1)
+epochs       = 25
+batch_size   = 16
+grad_clip    = 1.0  <span class="code-comment"># max_norm</span>
+frozen_blocks = 4   <span class="code-comment"># ViT blocks frozen</span>
+    </div>
+
+    <hr>
+
+    <!-- COMPARISON TABLE -->
+    <h2>Comparison with Baselines</h2>
+    <p>
+        We compare our proposed ViT + KAN against two baselines on the same
+        train/val/test split with identical training configuration.
+    </p>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Top-1 Acc ↑</th>
+                    <th>Top-5 Acc ↑</th>
+                    <th>Precision ↑</th>
+                    <th>Recall ↑</th>
+                    <th>F1 Score ↑</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>ViT + KAN (Proposed) <span class="ours-badge">OURS</span></td>
+                    <td>88.98%</td>
+                    <td>99.23%</td>
+                    <td>0.9123</td>
+                    <td>0.9120</td>
+                    <td>0.9048</td>
+                </tr>
+                <tr>
+                    <td>ViT + MLP (Baseline)</td>
+                    <td>88.73%</td>
+                    <td>98.97%</td>
+                    <td>0.9000</td>
+                    <td>0.9056</td>
+                    <td>0.8968</td>
+                </tr>
+                <tr>
+                    <td>ViT + Efficient KAN</td>
+                    <td>68.85%</td>
+                    <td>92.08%</td>
+                    <td>0.4244</td>
+                    <td>0.4174</td>
+                    <td>0.4024</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <hr>
+
+    <!-- XAI -->
+    <h2>Explainability Methods</h2>
+    <p>
+        Two complementary XAI methods are applied post-prediction to provide
+        spatially grounded explanations for each classification decision.
+    </p>
+    <div class="xai-grid">
+        <div class="xai-item">
+            <h4>GradCAM</h4>
+            <p>
+                Computes gradient of the class score with respect to the final
+                attention block's feature maps. Produces a coarse heatmap
+                indicating which spatial regions most influenced the prediction.
+                Red regions indicate high relevance.
+            </p>
+        </div>
+        <div class="xai-item">
+            <h4>Attention Rollout</h4>
+            <p>
+                Propagates raw attention weights through all 12 transformer
+                blocks using matrix multiplication, accounting for residual
+                connections. Produces a per-patch relevance map from the
+                CLS token's perspective.
+            </p>
+        </div>
+    </div>
+
+    <hr>
+
+    <!-- DEMO -->
+    <h2 id="demo">Interactive Demo</h2>
+    <p>
+        Upload a brain MRI image below to classify the tumor type and visualize
+        the model's attention and gradient-based explanations.
+    </p>
+    <div class="demo-container">
+        <div class="demo-bar">
+            <div class="demo-dot" style="background:#ff5f57"></div>
+            <div class="demo-dot" style="background:#febc2e"></div>
+            <div class="demo-dot" style="background:#28c840"></div>
+            &nbsp; ak-4647/brain-tumor-classifier — Hugging Face Space
+        </div>
+        <iframe
+            src="https://ak-4647-brain-tumor-classifier.hf.space"
+            frameborder="0"
+            allow="microphone; camera"
+            style="width:100%; height:850px; border:none; display:block;">
+        </iframe>
+    </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+    Arun K &nbsp;·&nbsp; MSc AIML, VIT Vellore &nbsp;·&nbsp; 2026 &nbsp;·&nbsp;
+    <a href="https://github.com/arunkathires" target="_blank">GitHub</a> &nbsp;·&nbsp;
+    <a href="https://huggingface.co/ak-4647" target="_blank">Hugging Face</a>
+</div>
+
+</body>
+</html>
